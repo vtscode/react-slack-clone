@@ -1,8 +1,10 @@
 import React from 'react';
 import { AppContext } from "../App";
 import firebase from "../../firebase";
+import { connect } from 'react-redux';
 import { Menu,Icon } from "semantic-ui-react";
 import { useCustomReducer } from "../../hooks";
+import { setCurrentChannel,setPrivateChannel } from "../../actions";
 
 const initData = {
   users : [],
@@ -10,7 +12,7 @@ const initData = {
   connectedRef : firebase.database().ref('.info/connected'),
   presenceRef : firebase.database().ref('presence')
 }
-const DirectMessages = () => {
+const DirectMessages = (props) => {
   const {appData} = React.useContext(AppContext)
   const [dataReducer,reducerFunc] = useCustomReducer(initData);
 
@@ -68,6 +70,20 @@ const DirectMessages = () => {
 
   }
 
+  const changeChannel = user => {
+    const channelId = getChannelId(user.uid);
+    const channelData = {
+      id : channelId,
+      name : user.name
+    }
+    props.setCurrentChannel(channelData)
+    props.isPrivateChannel(true);
+  }
+  const getChannelId = userId => {
+    const currentUID = appData.user.uid;
+    return userId < currentUID ? `${userId}/${currentUID}` : `${currentUID}/${userId}`;
+  }
+
   const isUserOn = (user) => user.status === 'online';
 
   React.useEffect(() => {
@@ -88,7 +104,7 @@ const DirectMessages = () => {
     {dataReducer.users.length ? dataReducer.users.map((x) => (
       <Menu.Item 
         key={x.uid} 
-        onClick={() => console.log(x)}
+        onClick={() => changeChannel(x)}
         style={{opacity : 0.7,fontStyle : 'italic'}}
       >
         <Icon name="circle"
@@ -99,4 +115,4 @@ const DirectMessages = () => {
     )) : ''}
   </Menu.Menu>);
 }
-export default DirectMessages;
+export default connect(null,{setCurrentChannel,setPrivateChannel})(DirectMessages);
