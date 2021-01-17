@@ -3,7 +3,7 @@ import firebase from "../../firebase";
 import { setCurrentChannel } from "../../actions";
 import { useCustomReducer } from "../../hooks";
 import { Menu,Icon,Modal, Form,Input,Button } from "semantic-ui-react";
-import { UserContext } from "../App";
+import { AppContext } from "../App";
 import { connect } from 'react-redux';
 
 const initial = {
@@ -18,7 +18,7 @@ const initial = {
 }
 
 const Channels = (props) => {
-  const {user} = React.useContext(UserContext);
+  const {appData : {user}} = React.useContext(AppContext);
   const [dataReducer,reducerFunc] = useCustomReducer(initial);
 
   const handleChange = (event) => {

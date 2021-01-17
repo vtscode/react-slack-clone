@@ -1,26 +1,39 @@
 import React from 'react';
 import './App.css';
+import { connect } from 'react-redux';
 import { Grid } from "semantic-ui-react";
-import ColorPanel from "./ColorPanel/ColorPanel";
+import Messages from "./Messages/Messages";
+import { useCustomReducer } from "../hooks";
 import MetaPanel from "./MetaPanel/MetaPanel";
 import SidePanel from "./SidePanel/SidePanel";
-import Messages from "./Messages/Messages";
-import { connect } from 'react-redux';
+import ColorPanel from "./ColorPanel/ColorPanel";
 
-export const UserContext = React.createContext({})
-
+export const AppContext = React.createContext({})
+const initData = {
+  user : {},
+  channel : {}
+}
 const App = (props) => {
-  const [user,setUser] = React.useState({});
-
+  const [dataReducer,reducerFunc] = useCustomReducer(initData);
+  
+  React.useEffect(() => {
+    if(props.currentChannel){
+      reducerFunc('channel',props.currentChannel)
+    }
+  },[props.currentChannel])
   React.useEffect(() => {
     if(props.currentUser){
-      console.log(props.currentUser)
-      setUser(props.currentUser)
+      reducerFunc('user',props.currentUser)
     }
   },[])
 
   return (
-  <UserContext.Provider value={{user}}>
+  <AppContext.Provider 
+    value={{
+        appData : dataReducer,
+        appDispatch : reducerFunc
+      }}
+    >
     <Grid columns="equal" className="app" style={{background : '#eee'}}>
       <ColorPanel />
       <SidePanel />
@@ -31,10 +44,11 @@ const App = (props) => {
         <MetaPanel />
       </Grid.Column>
     </Grid>
-  </UserContext.Provider>
+  </AppContext.Provider>
   )
 }
 const mapStateToProps = state => ({
-  currentUser : state.user.currentUser
+  currentUser : state.user.currentUser,
+  currentChannel : state.channel.currentChannel,
 })
 export default connect(mapStateToProps)(App);

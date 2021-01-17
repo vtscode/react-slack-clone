@@ -7,7 +7,7 @@ const MessagesHeader = () => {
       {/* Chnnel title */}
       <Header
         as="h2" 
-        fluid
+        fluid="true"
         floated="left" 
         style={{marginBottom : 0}}
       >

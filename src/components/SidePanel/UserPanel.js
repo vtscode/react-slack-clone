@@ -1,10 +1,10 @@
 import React from 'react';
 import firebase from "../../firebase";
 import { Grid,Header,Icon,Dropdown, Image } from "semantic-ui-react";
-import { UserContext } from "../App";
+import { AppContext } from "../App";
 
 const UserPanel = () => {
-  const {user} = React.useContext(UserContext);
+  const {appData : {user}} = React.useContext(AppContext);
   const handleSignOut = () => {
     firebase
       .auth()
