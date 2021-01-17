@@ -1,7 +1,7 @@
 import React from 'react';
+import { AppContext } from "../App";
 import firebase from "../../firebase";
 import { Grid,Header,Icon,Dropdown, Image } from "semantic-ui-react";
-import { AppContext } from "../App";
 
 const UserPanel = () => {
   const {appData : {user}} = React.useContext(AppContext);

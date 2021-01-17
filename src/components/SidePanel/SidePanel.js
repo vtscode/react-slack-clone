@@ -1,7 +1,8 @@
 import React from 'react';
-import UserPanel from "./UserPanel";
 import Channels from "./Channels";
+import UserPanel from "./UserPanel";
 import { Menu } from "semantic-ui-react";
+import DirectMessages from "./DirectMessages";
 
 class SidePanel extends React.Component{
   render(){
@@ -15,6 +16,7 @@ class SidePanel extends React.Component{
       >
         <UserPanel />
         <Channels />
+        <DirectMessages />
       </Menu>
     )
   }

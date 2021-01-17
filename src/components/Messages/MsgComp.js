@@ -1,6 +1,6 @@
 import React from 'react';
-import { AppContext } from "../App";
 import moment from "moment";
+import { AppContext } from "../App";
 import { Comment,Image } from "semantic-ui-react";
 
 export default ({ msg }) => {

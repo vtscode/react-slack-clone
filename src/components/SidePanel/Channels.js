@@ -1,10 +1,10 @@
 import React from 'react';
-import firebase from "../../firebase";
-import { setCurrentChannel } from "../../actions";
-import { useCustomReducer } from "../../hooks";
-import { Menu,Icon,Modal, Form,Input,Button } from "semantic-ui-react";
 import { AppContext } from "../App";
 import { connect } from 'react-redux';
+import firebase from "../../firebase";
+import { useCustomReducer } from "../../hooks";
+import { setCurrentChannel } from "../../actions";
+import { Menu,Icon,Modal, Form,Input,Button } from "semantic-ui-react";
 
 const initial = {
   channels : [],
@@ -83,16 +83,14 @@ const Channels = (props) => {
 
 
   return(<React.Fragment>
-    <Menu.Menu
-      style={{paddingBottom : '2em'}}
-    >
+    <Menu.Menu className="menu">
       <Menu.Item>
         <span>
           <Icon name="exchange" /> CHANNELS
         </span> {' '}
         ({ dataReducer.channels.length }) <Icon name="add" onClick={openModal} />
       </Menu.Item>
-      {dataReducer.channels.length && 
+      {dataReducer.channels.length ? 
        dataReducer.channels.map((x,idx) => (
          <Menu.Item 
           key={idx}
@@ -104,7 +102,7 @@ const Channels = (props) => {
           # {x.name}
          </Menu.Item>
        )) 
-      }
+      : ''}
     </Menu.Menu>
     <Modal 
       basic 

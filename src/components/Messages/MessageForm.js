@@ -142,21 +142,22 @@ const MessageForm = ({isUploadingFile}) => {
           icon="edit"
         />
         <Button 
-          color="green"
+          color="teal"
+          disabled={dataReducer.modalUpload.uploadState === 'uploading'}
           onClick={openModal}
           content="Upload Media"
           labelPosition="right"
           icon="cloud"
         />
-        <FileModal 
-          dataMsgForm={dataReducer} 
-          reducerFuncMsgForm={reducerFunc} 
-          uploadFile={uploadFile}
-        />
-        <ProgressUpload 
-          dataMsgForm={dataReducer} 
-        />
       </Button.Group>
+      <FileModal 
+        dataMsgForm={dataReducer} 
+        reducerFuncMsgForm={reducerFunc} 
+        uploadFile={uploadFile}
+      />
+      <ProgressUpload 
+        dataMsgForm={dataReducer} 
+      />
     </Segment>
   )
 }
