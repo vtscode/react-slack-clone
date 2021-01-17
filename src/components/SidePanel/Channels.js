@@ -1,27 +1,86 @@
 import React from 'react';
+import firebase from "../../firebase";
+import { setCurrentChannel } from "../../actions";
 import { useCustomReducer } from "../../hooks";
 import { Menu,Icon,Modal, Form,Input,Button } from "semantic-ui-react";
+import { UserContext } from "../App";
+import { connect } from 'react-redux';
 
 const initial = {
   channels : [],
+  activeChannel:'',
   modalAdd : {
     visible : false
   },
-  channelForm : {}
+  firstLoad : true,
+  channelForm : {},
+  channelsRef : firebase.database().ref('channels')
 }
 
-const Channels = () => {
+const Channels = (props) => {
+  const {user} = React.useContext(UserContext);
   const [dataReducer,reducerFunc] = useCustomReducer(initial);
 
   const handleChange = (event) => {
     reducerFunc('channelForm', {[event.target.name] : event.target.value})
   }
+  
   const isFormValid = () => dataReducer.channelForm.channelName && dataReducer.channelForm.channelDetails;
+  const addChannel = () => {
+    const key = dataReducer.channelsRef.push().key;
+    const newChannel = {
+      id : key,
+      name : dataReducer.channelForm.channelName,
+      details : dataReducer.channelForm.channelDetails,
+      createdBy : {
+        name : user.displayName,
+        avatar : user.photoURL
+      }
+    }
+
+    dataReducer.channelsRef
+      .child(key)
+      .update(newChannel)
+      .then(() => {
+        reducerFunc('channelForm',{channelName : '', channelDetails : ''})
+        closeModal()
+      })
+      .catch(err => console.log(err))
+  }
+  const closeModal = () => reducerFunc('modalAdd',{visible : false})
+  const openModal = () => reducerFunc('modalAdd',{visible : true})
   const handleSubmit = event => {
-    if(isFormValid()){
-      
+    if(isFormValid()){  
+      addChannel()
     }
   }
+
+  const changeChannel = chnnl => {
+    setActiveChannel(chnnl);
+    props.setCurrentChannel(chnnl)
+  }
+  const setActiveChannel = dt => {
+    reducerFunc('activeChannel',dt.id,'conventional')
+  }
+  const setFirstChannel = () => {
+    if(dataReducer.firstLoad && dataReducer.channels.length){
+      props.setCurrentChannel(dataReducer.channels[0])
+      reducerFunc('firstLoad',false,'conventional')
+      reducerFunc('activeChannel',dataReducer.channels[0].id,'conventional')
+    }
+  }
+  React.useEffect(() => {
+    setFirstChannel()
+  },[dataReducer.channels.length])
+  React.useEffect(() => {
+    let loadedChannels = []
+    dataReducer.channelsRef.on('child_added', snap => {
+      loadedChannels.push(snap.val())
+      reducerFunc('channels',loadedChannels,'conventional')
+    });
+    return () => dataReducer.channelsRef.off();
+  },[])
+
 
   return(<React.Fragment>
     <Menu.Menu
@@ -31,14 +90,26 @@ const Channels = () => {
         <span>
           <Icon name="exchange" /> CHANNELS
         </span> {' '}
-        ({ dataReducer.channels.length }) <Icon name="add" onClick={() => reducerFunc('modalAdd',{visible : true})} />
+        ({ dataReducer.channels.length }) <Icon name="add" onClick={openModal} />
       </Menu.Item>
-      {/* Channels */}
+      {dataReducer.channels.length && 
+       dataReducer.channels.map((x,idx) => (
+         <Menu.Item 
+          key={idx}
+          onClick={() => changeChannel(x)}
+          name={x.name}
+          active={x.id === dataReducer.activeChannel}
+          style={{opacity: 0.7}}
+        >
+          # {x.name}
+         </Menu.Item>
+       )) 
+      }
     </Menu.Menu>
     <Modal 
       basic 
       open={dataReducer.modalAdd.visible} 
-      onClose={() => reducerFunc('modalAdd',{visible : false})}
+      onClose={closeModal}
     >
       <Modal.Header>Add a channel</Modal.Header>
       <Modal.Content>
@@ -62,10 +133,10 @@ const Channels = () => {
         </Form>
       </Modal.Content>
       <Modal.Actions>
-        <Button color="green" inverted>
+        <Button color="green" inverted onClick={handleSubmit}>
           <Icon name="checkmark" /> Add
         </Button>
-        <Button color="red" inverted onClick={() => reducerFunc('modalAdd',{visible : false})}>
+        <Button color="red" inverted onClick={closeModal}>
           <Icon name="remove"/> Cancel
         </Button>
       </Modal.Actions>
@@ -73,4 +144,4 @@ const Channels = () => {
   </React.Fragment>)
 }
 
-export default Channels;
+export default connect(null,{setCurrentChannel})(Channels);

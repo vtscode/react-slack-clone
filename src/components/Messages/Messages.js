@@ -1,12 +1,21 @@
 import React from 'react';
-import { Grid } from "semantic-ui-react";
+import MessagesHeader from "./MessagesHeader";
+import MessageForm from "./MessageForm";
+import { Segment,Comment } from "semantic-ui-react";
 
-class Messages extends React.Component{
-  render(){
-    return(
-      <div>Messages</div>
-    )
-  }
+const Messages = () => {
+  return(
+    <React.Fragment>
+      <MessagesHeader/> 
+      <Segment>
+        <Comment.Group className="messages">
+          {/* Mess */}
+        </Comment.Group>
+      </Segment>
+
+      <MessageForm /> 
+    </React.Fragment>
+  )
 }
 
 export default Messages;
