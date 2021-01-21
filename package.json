@@ -2,6 +2,9 @@
   "name": "react-slack-clone",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "8.x"
+  },
   "dependencies": {
     "emoji-mart": "^2.6.1",
     "firebase": "^5.3.0",

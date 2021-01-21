@@ -14,10 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removing Listeners, Securing our App with Firebase Rules
 - Deploying our App with Firebase Tools
 
-## [1.0.0] - 2021-21-01
+## [1.0.1] - 2021-21-01
 ### Added
 - Add changelog file
 ### Changed
+- Update .gitignore file for remove yarn.lock
+- Update package.json for added engine to vercel app
 - Update action types, reducers with private channel between user
 - Update action types with private channel between user
 - Update sidepanel with channel's notification counter unread message (new message)
