@@ -17,20 +17,20 @@ const DirectMessages = (props) => {
   const {appData} = React.useContext(AppContext)
   const [dataReducer,reducerFunc] = useCustomReducer(initData);
 
-  const addStatusToUser = (userID,connected = true) => {
-    const updatedUser = dataReducer.users.reduce((acc,u) => {
-      if(u.uid === userID){
-        u['status'] = `${connected ? 'online' : 'offline' }`
-      }
-      return acc;
-    },[])
-    reducerFunc('users',updatedUser,'conventional');
-  }
+  // React.useEffect(() => {
+  //   addListener()
+  // },[dataReducer.users.length])
+
+  React.useEffect(() => {
+    if(appData.user.uid){
+      addListener();
+    }
+  },[appData.user.uid]);
 
   const addListener = () => {
-    let currentUserUID = appData.user.uid; 
+    const currentUserUID = appData.user.uid; 
     if(currentUserUID){
-      let loadedUsers = [];
+      let loadedUsers = [...dataReducer.users];
       // offline user
       dataReducer.userRef.on('child_added',snap => {
         if(currentUserUID !== snap.key){
@@ -38,7 +38,6 @@ const DirectMessages = (props) => {
           user['uid'] = snap.key;
           user['status'] = 'offline';
           loadedUsers.push(user);
-          reducerFunc('users',loadedUsers,'conventional');
         }
       })
       // presence user status
@@ -52,8 +51,14 @@ const DirectMessages = (props) => {
             }
           })
         }
-      })
-      
+      });
+      reducerFunc('users',loadedUsers,'conventional');
+    }
+  }
+
+  React.useEffect(() => {
+    if(dataReducer.users.length){
+      const currentUserUID = appData.user.uid; 
       dataReducer.presenceRef.on('child_added', snap => {
         if(currentUserUID !== snap.key){
           // add status to user
@@ -62,12 +67,22 @@ const DirectMessages = (props) => {
       })
       dataReducer.presenceRef.on('child_removed', snap => {
         if(currentUserUID !== snap.key){
-          // remvoe status to user
+          // remeve status to user
           addStatusToUser(snap.key,false)
         }
       })
     }
+  },[dataReducer.users.length])
 
+  const addStatusToUser = (userID,connected = true) => {
+    const updatedUser = [...dataReducer.users].reduce((acc,u) => {
+      if(u.uid === userID){
+        u['status'] = `${connected ? 'online' : 'offline' }`
+      }
+      return acc.concat(u);
+    },[]);
+
+    reducerFunc('users',updatedUser,'conventional');
   }
 
   const changeChannel = user => {
@@ -85,11 +100,7 @@ const DirectMessages = (props) => {
     return userId < currentUID ? `${userId}/${currentUID}` : `${currentUID}/${userId}`;
   }
 
-  const isUserOn = (user) => user.status === 'online';
-
-  React.useEffect(() => {
-    addListener()
-  },[appData.user.uid])
+  const isUserOnline = (user) => user.status === 'online';
 
   return(
   <Menu.Menu className="menu">
@@ -107,7 +118,7 @@ const DirectMessages = (props) => {
         style={{opacity : 0.7,fontStyle : 'italic'}}
       >
         <Icon name="circle"
-          color={isUserOn(x) ? 'green' : 'red'}
+          color={isUserOnline(x) ? 'green' : 'red'}
          />
          @ {x.name}
         </Menu.Item>

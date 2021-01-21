@@ -24,39 +24,21 @@ const Channels = (props) => {
   const {appData : {user}} = React.useContext(AppContext);
   const [dataReducer,reducerFunc] = useCustomReducer(initial);
 
-  const handleChange = (event) => {
-    reducerFunc('channelForm', {[event.target.name] : event.target.value})
-  }
-  
-  const isFormValid = () => dataReducer.channelForm.channelName && dataReducer.channelForm.channelDetails;
-  const addChannel = () => {
-    const key = dataReducer.channelsRef.push().key;
-    const newChannel = {
-      id : key,
-      name : dataReducer.channelForm.channelName,
-      details : dataReducer.channelForm.channelDetails,
-      createdBy : {
-        name : user.displayName,
-        avatar : user.photoURL
-      }
-    }
+  React.useEffect(() => {
+    setFirstChannel()
+  },[dataReducer.channels.length])
+  React.useEffect(() => {
+    addListeners();
+    return dataReducer.channelsRef.off;
+  },[])
 
-    dataReducer.channelsRef
-      .child(key)
-      .update(newChannel)
-      .then(() => {
-        reducerFunc('channelForm',{channelName : '', channelDetails : ''})
-        closeModal()
-      })
-      .catch(err => console.log(err))
-  }
-  const closeModal = () => reducerFunc('modalAdd',{visible : false})
-  const openModal = () => reducerFunc('modalAdd',{visible : true})
-  const handleSubmit = event => {
-    event.preventDefault();
-    if(isFormValid()){
-      addChannel()
-    }
+  const addListeners = () => {
+    let loadedChannels = [];
+    dataReducer.channelsRef.on('child_added', snap => {
+      loadedChannels.push(snap.val());
+      reducerFunc('channels',loadedChannels,'conventional');
+      addNotificationListener(snap.key);
+    });
   }
   const addNotificationListener = (channelId) => {
     dataReducer.messagesRef.child(channelId).on('value', snap => {
@@ -66,6 +48,11 @@ const Channels = (props) => {
     })
   }
   const handleNotifications = (channelId, currentChannelId, notificationsState,snap) => {
+        console.clear();
+        console.log('chanel id : ',channelId);
+        console.log(' currentChannelId : ', currentChannelId);
+        console.log('notificationsState : ',notificationsState);
+        console.log('snap: ',snap);
     let lastTotal = 0;
     const notifications = [...notificationsState];
     let index = notifications.findIndex(notification => notification.id === channelId);
@@ -87,13 +74,50 @@ const Channels = (props) => {
     }
     reducerFunc('notifications',notifications,'conventional');
   }
-  const addListeners = () => {
-    let loadedChannels = []
-    dataReducer.channelsRef.on('child_added', snap => {
-      loadedChannels.push(snap.val());
-      reducerFunc('channels',loadedChannels,'conventional');
-      addNotificationListener(snap.key);
-    });
+  const setFirstChannel = () => {
+    const firstChannel = dataReducer.channels[0];
+    if(dataReducer.firstLoad && dataReducer.channels.length){
+      props.setCurrentChannel(firstChannel)
+      reducerFunc('firstLoad',false,'conventional')
+      reducerFunc('activeChannel',firstChannel.id,'conventional')
+      reducerFunc('channel',firstChannel,'conventional')
+    }
+  }
+  const addChannel = () => {
+    const key = dataReducer.channelsRef.push().key;
+    const newChannel = {
+      id : key,
+      name : dataReducer.channelForm.channelName,
+      details : dataReducer.channelForm.channelDetails,
+      createdBy : {
+        name : user.displayName,
+        avatar : user.photoURL
+      }
+    }
+
+    dataReducer.channelsRef
+      .child(key)
+      .update(newChannel)
+      .then(() => {
+        reducerFunc('channelForm',{channelName : '', channelDetails : ''})
+        closeModal()
+      })
+      .catch(err => console.log(err))
+  }
+
+  const handleChange = (event) => {
+    reducerFunc('channelForm', {[event.target.name] : event.target.value})
+  }
+  
+  const isFormValid = () => dataReducer.channelForm.channelName && dataReducer.channelForm.channelDetails;
+ 
+  const closeModal = () => reducerFunc('modalAdd',{visible : false})
+  const openModal = () => reducerFunc('modalAdd',{visible : true})
+  const handleSubmit = event => {
+    event.preventDefault();
+    if(isFormValid()){
+      addChannel()
+    }
   }
 
   const changeChannel = chnnl => {
@@ -126,23 +150,6 @@ const Channels = (props) => {
   const setActiveChannel = dt => {
     reducerFunc('activeChannel',dt.id,'conventional')
   }
-  const setFirstChannel = () => {
-    const firstChannel = dataReducer.channels[0];
-    if(dataReducer.firstLoad && dataReducer.channels.length){
-      props.setCurrentChannel(firstChannel)
-      reducerFunc('firstLoad',false,'conventional')
-      reducerFunc('activeChannel',firstChannel.id,'conventional')
-      reducerFunc('channel',firstChannel,'conventional')
-    }
-  }
-  React.useEffect(() => {
-    setFirstChannel()
-  },[dataReducer.channels.length])
-  React.useEffect(() => {
-    addListeners();
-    return () => dataReducer.channelsRef.off();
-  },[])
-
 
   return(<React.Fragment>
     <Menu.Menu className="menu">
