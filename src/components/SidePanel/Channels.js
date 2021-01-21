@@ -3,18 +3,21 @@ import { AppContext } from "../App";
 import { connect } from 'react-redux';
 import firebase from "../../firebase";
 import { useCustomReducer } from "../../hooks";
-import { setCurrentChannel } from "../../actions";
-import { Menu,Icon,Modal, Form,Input,Button } from "semantic-ui-react";
+import { setCurrentChannel,setPrivateChannel } from "../../actions";
+import { Menu,Icon,Modal, Form,Input,Button,Label} from "semantic-ui-react";
 
 const initial = {
   channels : [],
+  channel : null,
   activeChannel:'',
   modalAdd : {
     visible : false
   },
   firstLoad : true,
   channelForm : {},
-  channelsRef : firebase.database().ref('channels')
+  channelsRef : firebase.database().ref('channels'),
+  messagesRef : firebase.database().ref('messages'),
+  notifications : [], 
 }
 
 const Channels = (props) => {
@@ -50,34 +53,93 @@ const Channels = (props) => {
   const closeModal = () => reducerFunc('modalAdd',{visible : false})
   const openModal = () => reducerFunc('modalAdd',{visible : true})
   const handleSubmit = event => {
-    if(isFormValid()){  
+    event.preventDefault();
+    if(isFormValid()){
       addChannel()
     }
+  }
+  const addNotificationListener = (channelId) => {
+    dataReducer.messagesRef.child(channelId).on('value', snap => {
+      if(dataReducer.channel){
+        handleNotifications(channelId,dataReducer.channel.id,dataReducer.notifications,snap);
+      }
+    })
+  }
+  const handleNotifications = (channelId, currentChannelId, notificationsState,snap) => {
+    let lastTotal = 0;
+    const notifications = [...notificationsState];
+    let index = notifications.findIndex(notification => notification.id === channelId);
+    if(index !== -1){
+      if(channelId !== currentChannelId){
+        lastTotal = notifications[index].total;
+        if(snap.numChildren() - lastTotal > 0){
+          notifications[index].count = snap.numChildren() - lastTotal;
+        }
+      }
+      notifications[index].lastKnownTotal = snap.numChildren();
+    }else{
+      notifications.push({
+        id : channelId,
+        total : snap.numChildren(),
+        lastKnownTotal : snap.numChildren(),
+        count : 0
+      })
+    }
+    reducerFunc('notifications',notifications,'conventional');
+  }
+  const addListeners = () => {
+    let loadedChannels = []
+    dataReducer.channelsRef.on('child_added', snap => {
+      loadedChannels.push(snap.val());
+      reducerFunc('channels',loadedChannels,'conventional');
+      addNotificationListener(snap.key);
+    });
   }
 
   const changeChannel = chnnl => {
     setActiveChannel(chnnl);
-    props.setCurrentChannel(chnnl)
+    clearNotifications();
+    props.setCurrentChannel(chnnl);
+    props.setPrivateChannel(false);
+    reducerFunc('channel',chnnl,'conventional')
+  }
+  const clearNotifications = () => {
+    let index = dataReducer.notifications.findIndex(notif => notif.id === dataReducer.channel.id);
+
+    if(index !== -1){
+      let updateNotif = [...dataReducer.notifications];
+      updateNotif[index].total = dataReducer.notifications[index].lastKnownTotal;
+      updateNotif[index].count = 0;
+      reducerFunc('notifications',updateNotif,'conventional');
+    }
+  }
+  const getNotificationCount = ch => {
+    let count = 0;
+
+    dataReducer.notifications.forEach(notif => {
+      if(notif.id === ch.id){
+        count = notif.count;
+      }
+    });
+    if(count > 0) return count;
   }
   const setActiveChannel = dt => {
     reducerFunc('activeChannel',dt.id,'conventional')
   }
   const setFirstChannel = () => {
+    const firstChannel = dataReducer.channels[0];
     if(dataReducer.firstLoad && dataReducer.channels.length){
-      props.setCurrentChannel(dataReducer.channels[0])
+      props.setCurrentChannel(firstChannel)
       reducerFunc('firstLoad',false,'conventional')
-      reducerFunc('activeChannel',dataReducer.channels[0].id,'conventional')
+      reducerFunc('activeChannel',firstChannel.id,'conventional')
+      reducerFunc('channel',firstChannel,'conventional')
     }
   }
   React.useEffect(() => {
     setFirstChannel()
   },[dataReducer.channels.length])
   React.useEffect(() => {
-    let loadedChannels = []
-    dataReducer.channelsRef.on('child_added', snap => {
-      loadedChannels.push(snap.val())
-      reducerFunc('channels',loadedChannels,'conventional')
-    });
+    addListeners();
     return () => dataReducer.channelsRef.off();
   },[])
 
@@ -91,14 +153,17 @@ const Channels = (props) => {
         ({ dataReducer.channels.length }) <Icon name="add" onClick={openModal} />
       </Menu.Item>
       {dataReducer.channels.length ? 
-       dataReducer.channels.map((x,idx) => (
+       dataReducer.channels.map(x => (
          <Menu.Item 
-          key={idx}
+          key={x.id}
           onClick={() => changeChannel(x)}
           name={x.name}
-          active={x.id === dataReducer.activeChannel}
           style={{opacity: 0.7}}
+          active={x.id === dataReducer.activeChannel}
         >
+          {getNotificationCount(x) && (
+            <Label color="red">{getNotificationCount(x)}</Label>
+          )}
           # {x.name}
          </Menu.Item>
        )) 
@@ -142,4 +207,4 @@ const Channels = (props) => {
   </React.Fragment>)
 }
 
-export default connect(null,{setCurrentChannel})(Channels);
+export default connect(null,{setCurrentChannel,setPrivateChannel})(Channels);

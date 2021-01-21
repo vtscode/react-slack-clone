@@ -8,6 +8,7 @@ import { setCurrentChannel,setPrivateChannel } from "../../actions";
 
 const initData = {
   users : [],
+  activeChannel : '',
   userRef : firebase.database().ref('users'),
   connectedRef : firebase.database().ref('.info/connected'),
   presenceRef : firebase.database().ref('presence')
@@ -37,7 +38,6 @@ const DirectMessages = (props) => {
           user['uid'] = snap.key;
           user['status'] = 'offline';
           loadedUsers.push(user);
-          console.log('loaded users',loadedUsers);
           reducerFunc('users',loadedUsers,'conventional');
         }
       })
@@ -77,7 +77,8 @@ const DirectMessages = (props) => {
       name : user.name
     }
     props.setCurrentChannel(channelData)
-    props.isPrivateChannel(true);
+    props.setPrivateChannel(true);
+    reducerFunc('activeChannel',user.uid,'conventional');
   }
   const getChannelId = userId => {
     const currentUID = appData.user.uid;
@@ -89,9 +90,6 @@ const DirectMessages = (props) => {
   React.useEffect(() => {
     addListener()
   },[appData.user.uid])
-  React.useEffect(() => {
-    console.log(dataReducer.users)
-  },[dataReducer.users])
 
   return(
   <Menu.Menu className="menu">
@@ -104,6 +102,7 @@ const DirectMessages = (props) => {
     {dataReducer.users.length ? dataReducer.users.map((x) => (
       <Menu.Item 
         key={x.uid} 
+        active={x.uid === dataReducer.activeChannel}
         onClick={() => changeChannel(x)}
         style={{opacity : 0.7,fontStyle : 'italic'}}
       >

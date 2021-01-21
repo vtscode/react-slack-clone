@@ -10,6 +10,7 @@ import { Segment,Comment } from "semantic-ui-react";
 export const MessageContext = React.createContext({});
 const initData = {
   messagesRef : firebase.database().ref('messages'),
+  privateMessagesRef : firebase.database().ref('privateMessages'),
   allMsg : [],
   msgLoad : true,
   getAllUniqueUser : 0,
@@ -34,13 +35,19 @@ const Messages = () => {
   }
   const addListeners = dt => {
     let loadedMsg = [];
-    dataReducer.messagesRef.child(dt).on('child_added', snap => {
+    const ref = getMessagesRef();
+
+    ref.child(dt).on('child_added', snap => {
       loadedMsg.push(snap.val());
       reducerFunc('allMsg',loadedMsg,'conventional');
       reducerFunc('msgLoad',false,'conventional');
       countUniqueUser(loadedMsg);
-      return;
     })
+  }
+  const getMessagesRef = () => {
+    const {messagesRef,privateMessagesRef} = dataReducer;
+    const { isPrivateChannel } = appData;
+    return isPrivateChannel ? privateMessagesRef : messagesRef;
   }
   const isUploadingFile = percent => {
     if(percent > 0 && percent < 100) {
@@ -85,7 +92,10 @@ const Messages = () => {
         </Comment.Group>
       </Segment>
 
-      <MessageForm isUploadingFile={isUploadingFile} /> 
+      <MessageForm 
+        isUploadingFile={isUploadingFile} 
+        getMessagesRef={getMessagesRef} 
+      />
     </MessageContext.Provider>
   )
 }

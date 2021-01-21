@@ -11,16 +11,20 @@ import ColorPanel from "./ColorPanel/ColorPanel";
 export const AppContext = React.createContext({})
 const initData = {
   user : {},
-  channel : {}
+  channel : {},
+  isPrivateChannel :false
 }
 const App = (props) => {
   const [dataReducer,reducerFunc] = useCustomReducer(initData);
   
   React.useEffect(() => {
-    if(props.currentChannel){
+    if(props.currentChannel.id){
       reducerFunc('channel',props.currentChannel)
     }
-  },[props.currentChannel])
+  },[props.currentChannel.id])
+  React.useEffect(() => {
+    reducerFunc('isPrivateChannel',props.isPrivateChannel,'conventional')
+  },[props.isPrivateChannel])
   React.useEffect(() => {
     if(props.currentUser){
       reducerFunc('user',props.currentUser)
@@ -50,5 +54,6 @@ const App = (props) => {
 const mapStateToProps = state => ({
   currentUser : state.user.currentUser,
   currentChannel : state.channel.currentChannel,
+  isPrivateChannel : state.channel.isPrivateChannel
 })
 export default connect(mapStateToProps)(App);

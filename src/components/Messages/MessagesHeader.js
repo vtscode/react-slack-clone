@@ -7,6 +7,10 @@ const MessagesHeader = ({handleSearchChange}) => {
   const {appData} = React.useContext(AppContext);
   const {msgData} = React.useContext(MessageContext);
 
+  const displayChannelName = (ch) => {
+    return ch ? `${appData.isPrivateChannel ? '@' : "#"}${ch.name}` : '';
+  }
+
   return(
     <Segment clearing>
       {/* Chnnel title */}
@@ -16,8 +20,8 @@ const MessagesHeader = ({handleSearchChange}) => {
         floated="left" 
         style={{marginBottom : 0}}
       >
-        <span>#{appData.channel.name}
-          <Icon name="star outline" />
+        <span>{displayChannelName(appData.channel)}
+          {!appData.isPrivateChannel && <Icon name="star outline" />}
         </span>
         <Header.Subheader>{msgData.getAllUniqueUser} user{msgData.getAllUniqueUser > 1 ? 's' : ''}</Header.Subheader>
       </Header>

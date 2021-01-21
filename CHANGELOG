@@ -1,0 +1,27 @@
+# Changelog
+All notable changes to SLACK CLONE project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+- Starred Component to Favorite  Unfavorite Channels
+- MetaPanel Component to Display Channel Info
+- Color Picker to Change App Colors
+- Change and Edit User Avatar Images
+- Display Animation when Users Typing
+- Adding Emoji Picker, Loading Skeleton, Automatic Scroll to Bottom, Key Shortcuts
+- Removing Listeners, Securing our App with Firebase Rules
+- Deploying our App with Firebase Tools
+
+## [1.0.0] - 2021-21-01
+### Added
+- Add changelog file
+### Changed
+- Update action types, reducers with private channel between user
+- Update action types with private channel between user
+- Update sidepanel with channel's notification counter unread message (new message)
+- Update sidepanel directmessage component for active menu user on private channel change
+- Update update message component display references and header for public and private channel
+- Update variable in context app component for boolean isPrivateChannel
+- Update messageform component with reference updload and send message 

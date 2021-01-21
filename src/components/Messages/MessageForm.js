@@ -21,7 +21,7 @@ const initData = {
     errors: []
   }
 }
-const MessageForm = ({isUploadingFile}) => {
+const MessageForm = ({isUploadingFile,getMessagesRef}) => {
   const [dataReducer,reducerFunc] = useCustomReducer(initData);
   const {msgData} = React.useContext(MessageContext);
   const {appData} = React.useContext(AppContext);
@@ -50,7 +50,7 @@ const MessageForm = ({isUploadingFile}) => {
   const sendMessage = () => {
     if(dataReducer.message){
       reducerFunc('loading',true,'conventional')
-      msgData.messagesRef
+      getMessagesRef()
         .child(appData.channel.id)
         .push()
         .set(createMessage())
@@ -70,9 +70,15 @@ const MessageForm = ({isUploadingFile}) => {
     uploadState : 'error',
     uploadTask : null
   })
-
+  const getPath = () => {
+    if(appData.isPrivateChannel){
+      return `chat/private-${appData.channel.id}`;
+    }else{
+      return 'chat/public';
+    }
+  }
   const uploadFile = (file,metadata) => {
-    const filePath = `chat/public/${uuidv4()}.jpg`;
+    const filePath = `${getPath()}/${uuidv4()}.jpg`;
 
     reducerFunc('modalUpload',{
       uploadState : 'uploading',
@@ -82,7 +88,7 @@ const MessageForm = ({isUploadingFile}) => {
 
   const processUpload = () => {
     const pathToUpload = appData.channel.id;
-    const ref = msgData.messagesRef;
+    const ref = getMessagesRef();
     if(dataReducer.modalUpload.uploadTask){
       dataReducer.modalUpload.uploadTask.on('state_changed',snap => {
         const percentUploaded = Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
