@@ -1,5 +1,4 @@
 import React from "react";
-
 const reducerData = (state,action) => {
   switch (action.varian) {
     case 'conventional':
@@ -16,10 +15,11 @@ const reducerData = (state,action) => {
   }
 };
 
-export default props => {
+const useCustomReducer = props => {
   const [reducer,dispatchReducer] = React.useReducer(reducerData,props);
   const reducerFunc = (type,payload,varian = '') => {
     dispatchReducer({type,payload,varian});
   };
   return [reducer,reducerFunc];
 };
+export default useCustomReducer;

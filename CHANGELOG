@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add changelog file
 ### Changed
-- Update .gitignore file for remove yarn.lock
+- Update all package.json with nodejs engine 12.x and update yarn.lock
 - Update package.json for added engine to vercel app
 - Update action types, reducers with private channel between user
 - Update action types with private channel between user

@@ -3,7 +3,7 @@ import moment from "moment";
 import { AppContext } from "../App";
 import { Comment,Image } from "semantic-ui-react";
 
-export default ({ msg }) => {
+const MsgComp = ({ msg }) => {
   const {appData} = React.useContext(AppContext);
   const isOwnMessage = (msg) => msg.user.id === appData.user.uid ? 'message__self' : '';
 
@@ -26,3 +26,4 @@ export default ({ msg }) => {
     </Comment>
   );
 }
+export default MsgComp;
