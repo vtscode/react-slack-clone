@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removing Listeners, Securing our App with Firebase Rules
 - Deploying our App with Firebase Tools
 
+## [2.0.0] - 2021-21-01
+### Added
+- Added starred sidepanel component
+### Changed
+- Starred Component to Favorite  Unfavorite Channels
+- MetaPanel Component to Display Channel Info
+- Color Picker to Change App Colors
+
 ## [1.0.1] - 2021-21-01
 ### Added
 - Add changelog file
