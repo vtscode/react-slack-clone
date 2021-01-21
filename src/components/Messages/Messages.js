@@ -1,103 +1,142 @@
-import React from 'react';
-import MsgComp from "./MsgComp";
-import { AppContext } from "../App";
+import React from "react";
+import { Segment, Comment } from "semantic-ui-react";
 import firebase from "../../firebase";
-import MessageForm from "./MessageForm";
+
 import MessagesHeader from "./MessagesHeader";
-import { useCustomReducer } from "../../hooks";
-import { Segment,Comment } from "semantic-ui-react";
+import MessageForm from "./MessageForm";
+import Message from "./Message";
 
-export const MessageContext = React.createContext({});
-const initData = {
-  messagesRef : firebase.database().ref('messages'),
-  privateMessagesRef : firebase.database().ref('privateMessages'),
-  allMsg : [],
-  msgLoad : true,
-  getAllUniqueUser : 0,
-  searchTerm :{
-    loading : false,
-    query : '',
-    results : []
+class Messages extends React.Component {
+  state = {
+    privateChannel: this.props.isPrivateChannel,
+    privateMessagesRef: firebase.database().ref("privateMessages"),
+    messagesRef: firebase.database().ref("messages"),
+    messages: [],
+    messagesLoading: true,
+    channel: this.props.currentChannel,
+    user: this.props.currentUser,
+    numUniqueUsers: "",
+    searchTerm: "",
+    searchLoading: false,
+    searchResults: []
+  };
+
+  componentDidMount() {
+    const { channel, user } = this.state;
+
+    if (channel && user) {
+      this.addListeners(channel.id);
+    }
   }
-}
-const Messages = () => {
-  const {appData} = React.useContext(AppContext)
-  const [dataReducer,reducerFunc] = useCustomReducer(initData);
 
-  const countUniqueUser = msg => {
-    let getAllUniqueUser = msg.reduce((acc,message) => {
-      if(!acc.includes(message.user.name)){
-        acc.push(message.user.name)
+  addListeners = channelId => {
+    this.addMessageListener(channelId);
+  };
+
+  addMessageListener = channelId => {
+    let loadedMessages = [];
+    const ref = this.getMessagesRef();
+    ref.child(channelId).on("child_added", snap => {
+      loadedMessages.push(snap.val());
+      this.setState({
+        messages: loadedMessages,
+        messagesLoading: false
+      });
+      this.countUniqueUsers(loadedMessages);
+    });
+  };
+
+  getMessagesRef = () => {
+    const { messagesRef, privateMessagesRef, privateChannel } = this.state;
+    return privateChannel ? privateMessagesRef : messagesRef;
+  };
+
+  handleSearchChange = event => {
+    this.setState(
+      {
+        searchTerm: event.target.value,
+        searchLoading: true
+      },
+      () => this.handleSearchMessages()
+    );
+  };
+
+  handleSearchMessages = () => {
+    const channelMessages = [...this.state.messages];
+    const regex = new RegExp(this.state.searchTerm, "gi");
+    const searchResults = channelMessages.reduce((acc, message) => {
+      if (
+        (message.content && message.content.match(regex)) ||
+        message.user.name.match(regex)
+      ) {
+        acc.push(message);
       }
       return acc;
-    },[])
-    reducerFunc('getAllUniqueUser',getAllUniqueUser.length,'conventional');
-  }
-  const addListeners = dt => {
-    let loadedMsg = [];
-    const ref = getMessagesRef();
+    }, []);
+    this.setState({ searchResults });
+    setTimeout(() => this.setState({ searchLoading: false }), 1000);
+  };
 
-    ref.child(dt).on('child_added', snap => {
-      loadedMsg.push(snap.val());
-      reducerFunc('allMsg',loadedMsg,'conventional');
-      reducerFunc('msgLoad',false,'conventional');
-      countUniqueUser(loadedMsg);
-    })
-  }
-  const getMessagesRef = () => {
-    const {messagesRef,privateMessagesRef} = dataReducer;
-    const { isPrivateChannel } = appData;
-    return isPrivateChannel ? privateMessagesRef : messagesRef;
-  }
-  const isUploadingFile = percent => {
-    if(percent > 0 && percent < 100) {
-      return true
-    }
-    return false;
-  }
-
-  const handleSearchChange = event => {
-    reducerFunc('searchTerm',{query : event.target.value, loading: true});
-    const channelMsg = [...dataReducer.allMsg];
-    const rx = new RegExp(event.target.value,'gi');
-    const searchResults = channelMsg.reduce((acc,msg) => {
-      if((msg.content && msg.content.match(rx)) || (msg.user.name && msg.user.name.match(rx))){
-        acc.push(msg)
+  countUniqueUsers = messages => {
+    const uniqueUsers = messages.reduce((acc, message) => {
+      if (!acc.includes(message.user.name)) {
+        acc.push(message.user.name);
       }
-      return acc
-    },[]);
-    setTimeout(() => 
-      reducerFunc('searchTerm',{results : searchResults, loading: false})
-    ,700);
-  }
+      return acc;
+    }, []);
+    const plural = uniqueUsers.length > 1 || uniqueUsers.length === 0;
+    const numUniqueUsers = `${uniqueUsers.length} user${plural ? "s" : ""}`;
+    this.setState({ numUniqueUsers });
+  };
 
-  React.useEffect(() => {
-    if(appData.user && appData.channel.id){
-      addListeners(appData.channel.id)
-    }
-  },[appData.channel.id])  
-
-  return(
-    <MessageContext.Provider 
-      value={{
-        msgData : dataReducer,
-        msgDispatch : reducerFunc
-      }}
-    >
-      <MessagesHeader handleSearchChange={handleSearchChange} /> 
-      <Segment>
-        <Comment.Group className={isUploadingFile ? "messages__progress": "messages"}>
-          {dataReducer.searchTerm.query ? dataReducer.searchTerm.results.map(x => <MsgComp key={x.timestamp} msg={x} />)
-          : dataReducer.allMsg.map(x => <MsgComp key={x.timestamp} msg={x} />)}
-        </Comment.Group>
-      </Segment>
-
-      <MessageForm 
-        isUploadingFile={isUploadingFile} 
-        getMessagesRef={getMessagesRef} 
+  displayMessages = messages =>
+    messages.length > 0 &&
+    messages.map(message => (
+      <Message
+        key={message.timestamp}
+        message={message}
+        user={this.state.user}
       />
-    </MessageContext.Provider>
-  )
+    ));
+
+  displayChannelName = channel => {
+    return channel
+      ? `${this.state.privateChannel ? "@" : "#"}${channel.name}`
+      : "";
+  };
+
+  render() {
+    // prettier-ignore
+    const { messagesRef, messages, channel, user, numUniqueUsers, searchTerm, searchResults, searchLoading, privateChannel } = this.state;
+
+    return (
+      <React.Fragment>
+        <MessagesHeader
+          channelName={this.displayChannelName(channel)}
+          numUniqueUsers={numUniqueUsers}
+          handleSearchChange={this.handleSearchChange}
+          searchLoading={searchLoading}
+          isPrivateChannel={privateChannel}
+        />
+
+        <Segment>
+          <Comment.Group className="messages">
+            {searchTerm
+              ? this.displayMessages(searchResults)
+              : this.displayMessages(messages)}
+          </Comment.Group>
+        </Segment>
+
+        <MessageForm
+          messagesRef={messagesRef}
+          currentChannel={channel}
+          currentUser={user}
+          isPrivateChannel={privateChannel}
+          getMessagesRef={this.getMessagesRef}
+        />
+      </React.Fragment>
+    );
+  }
 }
 
 export default Messages;

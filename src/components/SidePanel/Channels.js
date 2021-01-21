@@ -1,217 +1,261 @@
-import React from 'react';
-import { AppContext } from "../App";
-import { connect } from 'react-redux';
+import React from "react";
 import firebase from "../../firebase";
-import { useCustomReducer } from "../../hooks";
-import { setCurrentChannel,setPrivateChannel } from "../../actions";
-import { Menu,Icon,Modal, Form,Input,Button,Label} from "semantic-ui-react";
+import { connect } from "react-redux";
+import { setCurrentChannel, setPrivateChannel } from "../../actions";
+import {
+  Menu,
+  Icon,
+  Modal,
+  Form,
+  Input,
+  Button,
+  Label
+} from "semantic-ui-react";
 
-const initial = {
-  channels : [],
-  channel : null,
-  activeChannel:'',
-  modalAdd : {
-    visible : false
-  },
-  firstLoad : true,
-  channelForm : {},
-  channelsRef : firebase.database().ref('channels'),
-  messagesRef : firebase.database().ref('messages'),
-  notifications : [], 
-}
+class Channels extends React.Component {
+  state = {
+    activeChannel: "",
+    user: this.props.currentUser,
+    channel: null,
+    channels: [],
+    channelName: "",
+    channelDetails: "",
+    channelsRef: firebase.database().ref("channels"),
+    messagesRef: firebase.database().ref("messages"),
+    notifications: [],
+    modal: false,
+    firstLoad: true
+  };
 
-const Channels = (props) => {
-  const {appData : {user}} = React.useContext(AppContext);
-  const [dataReducer,reducerFunc] = useCustomReducer(initial);
+  componentDidMount() {
+    this.addListeners();
+  }
 
-  React.useEffect(() => {
-    setFirstChannel()
-  },[dataReducer.channels.length])
-  React.useEffect(() => {
-    addListeners();
-    return dataReducer.channelsRef.off;
-  },[])
+  componentWillUnmount() {
+    this.removeListeners();
+  }
 
-  const addListeners = () => {
+  addListeners = () => {
     let loadedChannels = [];
-    dataReducer.channelsRef.on('child_added', snap => {
+    this.state.channelsRef.on("child_added", snap => {
       loadedChannels.push(snap.val());
-      reducerFunc('channels',loadedChannels,'conventional');
-      addNotificationListener(snap.key);
+      this.setState({ channels: loadedChannels }, () => this.setFirstChannel());
+      this.addNotificationListener(snap.key);
     });
-  }
-  const addNotificationListener = (channelId) => {
-    dataReducer.messagesRef.child(channelId).on('value', snap => {
-      if(dataReducer.channel){
-        handleNotifications(channelId,dataReducer.channel.id,dataReducer.notifications,snap);
+  };
+
+  addNotificationListener = channelId => {
+    this.state.messagesRef.child(channelId).on("value", snap => {
+      if (this.state.channel) {
+        this.handleNotifications(
+          channelId,
+          this.state.channel.id,
+          this.state.notifications,
+          snap
+        );
       }
-    })
-  }
-  const handleNotifications = (channelId, currentChannelId, notificationsState,snap) => {
-        console.clear();
-        console.log('chanel id : ',channelId);
-        console.log(' currentChannelId : ', currentChannelId);
-        console.log('notificationsState : ',notificationsState);
-        console.log('snap: ',snap);
+    });
+  };
+
+  handleNotifications = (channelId, currentChannelId, notifications, snap) => {
     let lastTotal = 0;
-    const notifications = [...notificationsState];
-    let index = notifications.findIndex(notification => notification.id === channelId);
-    if(index !== -1){
-      if(channelId !== currentChannelId){
+
+    let index = notifications.findIndex(
+      notification => notification.id === channelId
+    );
+
+    if (index !== -1) {
+      if (channelId !== currentChannelId) {
         lastTotal = notifications[index].total;
-        if(snap.numChildren() - lastTotal > 0){
+
+        if (snap.numChildren() - lastTotal > 0) {
           notifications[index].count = snap.numChildren() - lastTotal;
         }
       }
       notifications[index].lastKnownTotal = snap.numChildren();
-    }else{
+    } else {
       notifications.push({
-        id : channelId,
-        total : snap.numChildren(),
-        lastKnownTotal : snap.numChildren(),
-        count : 0
-      })
-    }
-    reducerFunc('notifications',notifications,'conventional');
-  }
-  const setFirstChannel = () => {
-    const firstChannel = dataReducer.channels[0];
-    if(dataReducer.firstLoad && dataReducer.channels.length){
-      props.setCurrentChannel(firstChannel)
-      reducerFunc('firstLoad',false,'conventional')
-      reducerFunc('activeChannel',firstChannel.id,'conventional')
-      reducerFunc('channel',firstChannel,'conventional')
-    }
-  }
-  const addChannel = () => {
-    const key = dataReducer.channelsRef.push().key;
-    const newChannel = {
-      id : key,
-      name : dataReducer.channelForm.channelName,
-      details : dataReducer.channelForm.channelDetails,
-      createdBy : {
-        name : user.displayName,
-        avatar : user.photoURL
-      }
+        id: channelId,
+        total: snap.numChildren(),
+        lastKnownTotal: snap.numChildren(),
+        count: 0
+      });
     }
 
-    dataReducer.channelsRef
+    this.setState({ notifications });
+  };
+
+  removeListeners = () => {
+    this.state.channelsRef.off();
+  };
+
+  setFirstChannel = () => {
+    const firstChannel = this.state.channels[0];
+    if (this.state.firstLoad && this.state.channels.length > 0) {
+      this.props.setCurrentChannel(firstChannel);
+      this.setActiveChannel(firstChannel);
+      this.setState({ channel: firstChannel });
+    }
+    this.setState({ firstLoad: false });
+  };
+
+  addChannel = () => {
+    const { channelsRef, channelName, channelDetails, user } = this.state;
+
+    const key = channelsRef.push().key;
+
+    const newChannel = {
+      id: key,
+      name: channelName,
+      details: channelDetails,
+      createdBy: {
+        name: user.displayName,
+        avatar: user.photoURL
+      }
+    };
+
+    channelsRef
       .child(key)
       .update(newChannel)
       .then(() => {
-        reducerFunc('channelForm',{channelName : '', channelDetails : ''})
-        closeModal()
+        this.setState({ channelName: "", channelDetails: "" });
+        this.closeModal();
+        console.log("channel added");
       })
-      .catch(err => console.log(err))
-  }
+      .catch(err => {
+        console.error(err);
+      });
+  };
 
-  const handleChange = (event) => {
-    reducerFunc('channelForm', {[event.target.name] : event.target.value})
-  }
-  
-  const isFormValid = () => dataReducer.channelForm.channelName && dataReducer.channelForm.channelDetails;
- 
-  const closeModal = () => reducerFunc('modalAdd',{visible : false})
-  const openModal = () => reducerFunc('modalAdd',{visible : true})
-  const handleSubmit = event => {
+  handleSubmit = event => {
     event.preventDefault();
-    if(isFormValid()){
-      addChannel()
+    if (this.isFormValid(this.state)) {
+      this.addChannel();
     }
-  }
+  };
 
-  const changeChannel = chnnl => {
-    setActiveChannel(chnnl);
-    clearNotifications();
-    props.setCurrentChannel(chnnl);
-    props.setPrivateChannel(false);
-    reducerFunc('channel',chnnl,'conventional')
-  }
-  const clearNotifications = () => {
-    let index = dataReducer.notifications.findIndex(notif => notif.id === dataReducer.channel.id);
+  handleChange = event => {
+    this.setState({ [event.target.name]: event.target.value });
+  };
 
-    if(index !== -1){
-      let updateNotif = [...dataReducer.notifications];
-      updateNotif[index].total = dataReducer.notifications[index].lastKnownTotal;
-      updateNotif[index].count = 0;
-      reducerFunc('notifications',updateNotif,'conventional');
+  changeChannel = channel => {
+    this.setActiveChannel(channel);
+    this.clearNotifications();
+    this.props.setCurrentChannel(channel);
+    this.props.setPrivateChannel(false);
+    this.setState({ channel });
+  };
+
+  clearNotifications = () => {
+    let index = this.state.notifications.findIndex(
+      notification => notification.id === this.state.channel.id
+    );
+
+    if (index !== -1) {
+      let updatedNotifications = [...this.state.notifications];
+      updatedNotifications[index].total = this.state.notifications[
+        index
+      ].lastKnownTotal;
+      updatedNotifications[index].count = 0;
+      this.setState({ notifications: updatedNotifications });
     }
-  }
-  const getNotificationCount = ch => {
+  };
+
+  setActiveChannel = channel => {
+    this.setState({ activeChannel: channel.id });
+  };
+
+  getNotificationCount = channel => {
     let count = 0;
 
-    dataReducer.notifications.forEach(notif => {
-      if(notif.id === ch.id){
-        count = notif.count;
+    this.state.notifications.forEach(notification => {
+      if (notification.id === channel.id) {
+        count = notification.count;
       }
     });
-    if(count > 0) return count;
-  }
-  const setActiveChannel = dt => {
-    reducerFunc('activeChannel',dt.id,'conventional')
-  }
 
-  return(<React.Fragment>
-    <Menu.Menu className="menu">
-      <Menu.Item>
-        <span>
-          <Icon name="exchange" /> CHANNELS
-        </span> {' '}
-        ({ dataReducer.channels.length }) <Icon name="add" onClick={openModal} />
+    if (count > 0) return count;
+  };
+
+  displayChannels = channels =>
+    channels.length > 0 &&
+    channels.map(channel => (
+      <Menu.Item
+        key={channel.id}
+        onClick={() => this.changeChannel(channel)}
+        name={channel.name}
+        style={{ opacity: 0.7 }}
+        active={channel.id === this.state.activeChannel}
+      >
+        {this.getNotificationCount(channel) && (
+          <Label color="red">{this.getNotificationCount(channel)}</Label>
+        )}
+        # {channel.name}
       </Menu.Item>
-      {dataReducer.channels.length ? 
-       dataReducer.channels.map(x => (
-         <Menu.Item 
-          key={x.id}
-          onClick={() => changeChannel(x)}
-          name={x.name}
-          style={{opacity: 0.7}}
-          active={x.id === dataReducer.activeChannel}
-        >
-          {getNotificationCount(x) && (
-            <Label color="red">{getNotificationCount(x)}</Label>
-          )}
-          # {x.name}
-         </Menu.Item>
-       )) 
-      : ''}
-    </Menu.Menu>
-    <Modal 
-      basic 
-      open={dataReducer.modalAdd.visible} 
-      onClose={closeModal}
-    >
-      <Modal.Header>Add a channel</Modal.Header>
-      <Modal.Content>
-        <Form>
-          <Form.Field>
-            <Input 
-              fluid
-              label="Name of Channel"
-              name="channelName"
-              onChange={handleChange}
-            />
-          </Form.Field>
-          <Form.Field>
-            <Input 
-              fluid
-              label="About the Channel"
-              name="channelDetails"
-              onChange={handleChange}
-            />
-          </Form.Field>
-        </Form>
-      </Modal.Content>
-      <Modal.Actions>
-        <Button color="green" inverted onClick={handleSubmit}>
-          <Icon name="checkmark" /> Add
-        </Button>
-        <Button color="red" inverted onClick={closeModal}>
-          <Icon name="remove"/> Cancel
-        </Button>
-      </Modal.Actions>
-    </Modal>
-  </React.Fragment>)
+    ));
+
+  isFormValid = ({ channelName, channelDetails }) =>
+    channelName && channelDetails;
+
+  openModal = () => this.setState({ modal: true });
+
+  closeModal = () => this.setState({ modal: false });
+
+  render() {
+    const { channels, modal } = this.state;
+
+    return (
+      <React.Fragment>
+        <Menu.Menu className="menu">
+          <Menu.Item>
+            <span>
+              <Icon name="exchange" /> CHANNELS
+            </span>{" "}
+            ({channels.length}) <Icon name="add" onClick={this.openModal} />
+          </Menu.Item>
+          {this.displayChannels(channels)}
+        </Menu.Menu>
+
+        {/* Add Channel Modal */}
+        <Modal basic open={modal} onClose={this.closeModal}>
+          <Modal.Header>Add a Channel</Modal.Header>
+          <Modal.Content>
+            <Form onSubmit={this.handleSubmit}>
+              <Form.Field>
+                <Input
+                  fluid
+                  label="Name of Channel"
+                  name="channelName"
+                  onChange={this.handleChange}
+                />
+              </Form.Field>
+
+              <Form.Field>
+                <Input
+                  fluid
+                  label="About the Channel"
+                  name="channelDetails"
+                  onChange={this.handleChange}
+                />
+              </Form.Field>
+            </Form>
+          </Modal.Content>
+
+          <Modal.Actions>
+            <Button color="green" inverted onClick={this.handleSubmit}>
+              <Icon name="checkmark" /> Add
+            </Button>
+            <Button color="red" inverted onClick={this.closeModal}>
+              <Icon name="remove" /> Cancel
+            </Button>
+          </Modal.Actions>
+        </Modal>
+      </React.Fragment>
+    );
+  }
 }
 
-export default connect(null,{setCurrentChannel,setPrivateChannel})(Channels);
+export default connect(
+  null,
+  { setCurrentChannel, setPrivateChannel }
+)(Channels);

@@ -1,59 +1,37 @@
-import React from 'react';
-import './App.css';
-import { connect } from 'react-redux';
+import React from "react";
 import { Grid } from "semantic-ui-react";
-import Messages from "./Messages/Messages";
-import { useCustomReducer } from "../hooks";
-import MetaPanel from "./MetaPanel/MetaPanel";
-import SidePanel from "./SidePanel/SidePanel";
+import "./App.css";
+import { connect } from "react-redux";
+
 import ColorPanel from "./ColorPanel/ColorPanel";
+import SidePanel from "./SidePanel/SidePanel";
+import Messages from "./Messages/Messages";
+import MetaPanel from "./MetaPanel/MetaPanel";
 
-export const AppContext = React.createContext({})
-const initData = {
-  user : {},
-  channel : {},
-  isPrivateChannel :false
-}
-const App = (props) => {
-  const [dataReducer,reducerFunc] = useCustomReducer(initData);
-  
-  React.useEffect(() => {
-    if(props.currentChannel.id){
-      reducerFunc('channel',props.currentChannel)
-    }
-  },[props.currentChannel.id])
-  React.useEffect(() => {
-    reducerFunc('isPrivateChannel',props.isPrivateChannel,'conventional')
-  },[props.isPrivateChannel])
-  React.useEffect(() => {
-    if(props.currentUser){
-      reducerFunc('user',props.currentUser)
-    }
-  },[])
+const App = ({ currentUser, currentChannel, isPrivateChannel }) => (
+  <Grid columns="equal" className="app" style={{ background: "#eee" }}>
+    <ColorPanel />
+    <SidePanel key={currentUser && currentUser.uid} currentUser={currentUser} />
 
-  return (
-  <AppContext.Provider 
-    value={{
-        appData : dataReducer,
-        appDispatch : reducerFunc
-      }}
-    >
-    <Grid columns="equal" className="app" style={{background : '#eee'}}>
-      <ColorPanel />
-      <SidePanel />
-      <Grid.Column style={{marginLeft : 320}}>
-        <Messages />
-      </Grid.Column>
-      <Grid.Column width={4}>
-        <MetaPanel />
-      </Grid.Column>
-    </Grid>
-  </AppContext.Provider>
-  )
-}
+    <Grid.Column style={{ marginLeft: 320 }}>
+      <Messages
+        key={currentChannel && currentChannel.id}
+        currentChannel={currentChannel}
+        currentUser={currentUser}
+        isPrivateChannel={isPrivateChannel}
+      />
+    </Grid.Column>
+
+    <Grid.Column width={4}>
+      <MetaPanel />
+    </Grid.Column>
+  </Grid>
+);
+
 const mapStateToProps = state => ({
-  currentUser : state.user.currentUser,
-  currentChannel : state.channel.currentChannel,
-  isPrivateChannel : state.channel.isPrivateChannel
-})
+  currentUser: state.user.currentUser,
+  currentChannel: state.channel.currentChannel,
+  isPrivateChannel: state.channel.isPrivateChannel
+});
+
 export default connect(mapStateToProps)(App);

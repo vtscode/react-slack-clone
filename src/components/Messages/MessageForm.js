@@ -1,171 +1,199 @@
-import React from 'react';
+import React from "react";
 import {v4 as uuidv4} from "uuid";
-import { AppContext } from "../App";
-import FileModal from "./FileModal";
 import firebase from "../../firebase";
-import { MessageContext } from "./Messages";
-import ProgressUpload from "./ProgressUpload";
-import { useCustomReducer } from "../../hooks";
-import { Segment,Button,Input } from "semantic-ui-react";
+import { Segment, Button, Input } from "semantic-ui-react";
 
-const initData = {
-  storageRef : firebase.storage().ref(),
-  message : '',
-  loading : false,
-  errors: [],
-  modalUpload : {
-    visible : false,
-    uploadState : '',
-    uploadTask : null,
-    percentUploaded : 0,
-    errors: []
-  }
-}
-const MessageForm = ({isUploadingFile,getMessagesRef}) => {
-  const [dataReducer,reducerFunc] = useCustomReducer(initData);
-  const {msgData} = React.useContext(MessageContext);
-  const {appData} = React.useContext(AppContext);
+import FileModal from "./FileModal";
+import ProgressBar from "./ProgressBar";
 
-  const handleChange = event => {
-    reducerFunc('message',event.target.value,'conventional')
-  }
-  const openModal = () => reducerFunc('modalUpload',{visible : true});
-  const createMessage = (fileUrl = null) => {
-    const msg = {
-      timestamp : firebase.database.ServerValue.TIMESTAMP,
-      user : {
-        id : appData.user.uid,
-        name : appData.user.displayName,
-        avatar : appData.user.photoURL
-      },
+class MessageForm extends React.Component {
+  state = {
+    storageRef: firebase.storage().ref(),
+    uploadTask: null,
+    uploadState: "",
+    percentUploaded: 0,
+    message: "",
+    channel: this.props.currentChannel,
+    user: this.props.currentUser,
+    loading: false,
+    errors: [],
+    modal: false
+  };
+
+  openModal = () => this.setState({ modal: true });
+
+  closeModal = () => this.setState({ modal: false });
+
+  handleChange = event => {
+    this.setState({ [event.target.name]: event.target.value });
+  };
+
+  createMessage = (fileUrl = null) => {
+    const message = {
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+      user: {
+        id: this.state.user.uid,
+        name: this.state.user.displayName,
+        avatar: this.state.user.photoURL
+      }
+    };
+    if (fileUrl !== null) {
+      message["image"] = fileUrl;
+    } else {
+      message["content"] = this.state.message;
     }
-    if(fileUrl){
-      msg['image'] = fileUrl;
-    }else{
-      msg['content'] = dataReducer.message;
-    }
-    return msg
-  }
+    return message;
+  };
 
-  const sendMessage = () => {
-    if(dataReducer.message){
-      reducerFunc('loading',true,'conventional')
+  sendMessage = () => {
+    const { getMessagesRef } = this.props;
+    const { message, channel } = this.state;
+
+    if (message) {
+      this.setState({ loading: true });
       getMessagesRef()
-        .child(appData.channel.id)
+        .child(channel.id)
         .push()
-        .set(createMessage())
+        .set(this.createMessage())
         .then(() => {
-          reducerFunc('loading',false,'conventional')
-          reducerFunc('message','','conventional')
-        }).catch(err => {
-          reducerFunc('errors',[...dataReducer.errors,err],'conventional')
-          reducerFunc('loading',false,'conventional')
+          this.setState({ loading: false, message: "", errors: [] });
         })
-    }else{
-      reducerFunc('errors',[...dataReducer.errors,{message : 'Add a message'}],'conventional')
+        .catch(err => {
+          console.error(err);
+          this.setState({
+            loading: false,
+            errors: this.state.errors.concat(err)
+          });
+        });
+    } else {
+      this.setState({
+        errors: this.state.errors.concat({ message: "Add a message" })
+      });
     }
-  }
-  const errorUpload = err => reducerFunc('modalUpload',{
-    errors : err,
-    uploadState : 'error',
-    uploadTask : null
-  })
-  const getPath = () => {
-    if(appData.isPrivateChannel){
-      return `chat/private-${appData.channel.id}`;
-    }else{
-      return 'chat/public';
+  };
+
+  getPath = () => {
+    if (this.props.isPrivateChannel) {
+      return `chat/private-${this.state.channel.id}`;
+    } else {
+      return "chat/public";
     }
-  }
-  const uploadFile = (file,metadata) => {
-    const filePath = `${getPath()}/${uuidv4()}.jpg`;
+  };
 
-    reducerFunc('modalUpload',{
-      uploadState : 'uploading',
-      uploadTask : dataReducer.storageRef.child(filePath).put(file,metadata)
-    })
-  }
+  uploadFile = (file, metadata) => {
+    const pathToUpload = this.state.channel.id;
+    const ref = this.props.getMessagesRef();
+    const filePath = `${this.getPath()}/${uuidv4()}.jpg`;
 
-  const processUpload = () => {
-    const pathToUpload = appData.channel.id;
-    const ref = getMessagesRef();
-    if(dataReducer.modalUpload.uploadTask){
-      dataReducer.modalUpload.uploadTask.on('state_changed',snap => {
-        const percentUploaded = Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
-        isUploadingFile(percentUploaded)
-        reducerFunc('modalUpload',{percentUploaded})
-      },err => {
-        errorUpload(err)
-      },() => {
-        dataReducer.modalUpload.uploadTask.snapshot.ref.getDownloadURL().then(url => {
-          sendFileMsg(url,ref,pathToUpload)
-        }).catch(err => {
-          errorUpload(err)
-        })
-      })
-    }
-  }
+    this.setState(
+      {
+        uploadState: "uploading",
+        uploadTask: this.state.storageRef.child(filePath).put(file, metadata)
+      },
+      () => {
+        this.state.uploadTask.on(
+          "state_changed",
+          snap => {
+            const percentUploaded = Math.round(
+              (snap.bytesTransferred / snap.totalBytes) * 100
+            );
+            this.setState({ percentUploaded });
+          },
+          err => {
+            console.error(err);
+            this.setState({
+              errors: this.state.errors.concat(err),
+              uploadState: "error",
+              uploadTask: null
+            });
+          },
+          () => {
+            this.state.uploadTask.snapshot.ref
+              .getDownloadURL()
+              .then(downloadUrl => {
+                this.sendFileMessage(downloadUrl, ref, pathToUpload);
+              })
+              .catch(err => {
+                console.error(err);
+                this.setState({
+                  errors: this.state.errors.concat(err),
+                  uploadState: "error",
+                  uploadTask: null
+                });
+              });
+          }
+        );
+      }
+    );
+  };
 
-  const sendFileMsg = (url,ref,pathToUpload) => {
+  sendFileMessage = (fileUrl, ref, pathToUpload) => {
     ref
       .child(pathToUpload)
       .push()
-      .set(createMessage(url))
+      .set(this.createMessage(fileUrl))
       .then(() => {
-        reducerFunc('modalUpload',{
-          uploadState : 'done',
-        })
-      }).catch(err => {
-        errorUpload(err)
+        this.setState({ uploadState: "done" });
       })
-  }
+      .catch(err => {
+        console.error(err);
+        this.setState({
+          errors: this.state.errors.concat(err)
+        });
+      });
+  };
 
-  React.useEffect(() => {
-    processUpload();
-  },[dataReducer.modalUpload.uploadTask])
+  render() {
+    // prettier-ignore
+    const { errors, message, loading, modal, uploadState, percentUploaded } = this.state;
 
-  return(
-    <Segment className="message__form">
-      <Input
-        fluid
-        style={{marginBottom : '0.7em'}}
-        label={<Button icon="add" />}
-        labelPosition="left"
-        onChange={handleChange}
-        value={dataReducer.message}
-        placeholder="Write your message"
-        className={dataReducer.errors.some(err => err.message.includes('message')) ? 'error' : ''}
-        name="message"
-      />
-      <Button.Group icon widths="2">
-        <Button 
-          onClick={sendMessage}
-          color="orange"
-          disabled={dataReducer.loading}
-          loading={dataReducer.loading}
-          content="Add Reply"
+    return (
+      <Segment className="message__form">
+        <Input
+          fluid
+          name="message"
+          onChange={this.handleChange}
+          value={message}
+          style={{ marginBottom: "0.7em" }}
+          label={<Button icon={"add"} />}
           labelPosition="left"
-          icon="edit"
+          className={
+            errors.some(error => error.message.includes("message"))
+              ? "error"
+              : ""
+          }
+          placeholder="Write your message"
         />
-        <Button 
-          color="teal"
-          disabled={dataReducer.modalUpload.uploadState === 'uploading'}
-          onClick={openModal}
-          content="Upload Media"
-          labelPosition="right"
-          icon="cloud"
+        <Button.Group icon widths="2">
+          <Button
+            onClick={this.sendMessage}
+            disabled={loading}
+            color="orange"
+            content="Add Reply"
+            labelPosition="left"
+            icon="edit"
+          />
+          <Button
+            color="teal"
+            disabled={uploadState === "uploading"}
+            onClick={this.openModal}
+            content="Upload Media"
+            labelPosition="right"
+            icon="cloud upload"
+          />
+        </Button.Group>
+        <FileModal
+          modal={modal}
+          closeModal={this.closeModal}
+          uploadFile={this.uploadFile}
         />
-      </Button.Group>
-      <FileModal 
-        dataMsgForm={dataReducer} 
-        reducerFuncMsgForm={reducerFunc} 
-        uploadFile={uploadFile}
-      />
-      <ProgressUpload 
-        dataMsgForm={dataReducer} 
-      />
-    </Segment>
-  )
+        <ProgressBar
+          uploadState={uploadState}
+          percentUploaded={percentUploaded}
+        />
+      </Segment>
+    );
+  }
 }
 
 export default MessageForm;

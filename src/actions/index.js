@@ -1,33 +1,36 @@
-import * as actionTypes from './types';
-// user
+import * as actionTypes from "./types";
+
+/* User Actions */
 export const setUser = user => {
   return {
-    type : actionTypes.SET_USER,
-    payload : {
-      currentUser : user
+    type: actionTypes.SET_USER,
+    payload: {
+      currentUser: user
     }
-  }
-}
-export const clearUserFromGlobState = () => {
-  return {
-    type : actionTypes.CLEAR_USER,
-  }
-}
+  };
+};
 
-// channel
-export const setCurrentChannel = chnnl => {
+export const clearUser = () => {
   return {
-    type : actionTypes.SET_CURRENT_CHANNEL,
-    payload : {
-      currentChannel : chnnl
+    type: actionTypes.CLEAR_USER
+  };
+};
+
+/* Channel Actions */
+export const setCurrentChannel = channel => {
+  return {
+    type: actionTypes.SET_CURRENT_CHANNEL,
+    payload: {
+      currentChannel: channel
     }
-  }
-}
+  };
+};
+
 export const setPrivateChannel = isPrivateChannel => {
   return {
-    type : actionTypes.SET_PRIVATE_CHANNEL,
-    payload : {
+    type: actionTypes.SET_PRIVATE_CHANNEL,
+    payload: {
       isPrivateChannel
     }
-  }
-}
+  };
+};
