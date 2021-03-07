@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu } from "semantic-ui-react";
+import { Sidebar,Menu } from "semantic-ui-react";
 
 import UserPanel from "./UserPanel";
 import Channels from "./Channels";
@@ -11,18 +11,19 @@ class SidePanel extends React.Component {
     const { currentUser, primaryColor } = this.props;
 
     return (
-      <Menu
+      <Sidebar
+        as={Menu}
         size="large"
         inverted
-        fixed="left"
         vertical
+        visible={this.props.sidebarState.visible}
         style={{ background: primaryColor, fontSize: "1.2rem" }}
       >
         <UserPanel primaryColor={primaryColor} currentUser={currentUser} />
         <Starred currentUser={currentUser} />
         <Channels currentUser={currentUser} />
         <DirectMessages currentUser={currentUser} />
-      </Menu>
+      </Sidebar>
     );
   }
 }

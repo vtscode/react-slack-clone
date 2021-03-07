@@ -8,38 +8,56 @@ import SidePanel from "./SidePanel/SidePanel";
 import Messages from "./Messages/Messages";
 import MetaPanel from "./MetaPanel/MetaPanel";
 
+export const AppContext = React.createContext({})
 // prettier-ignore
-const App = ({ currentUser, currentChannel, isPrivateChannel, userPosts, primaryColor, secondaryColor }) => (
-  <Grid columns="equal" className="app" style={{ background: secondaryColor }}>
-    <ColorPanel
-      key={currentUser && currentUser.name}
-      currentUser={currentUser}
-    />
-    <SidePanel
-      key={currentUser && currentUser.uid}
-      currentUser={currentUser}
-      primaryColor={primaryColor}
-    />
+const App = ({ currentUser, currentChannel, isPrivateChannel, userPosts, primaryColor, secondaryColor }) => {
 
-    <Grid.Column style={{ marginLeft: 320 }}>
-      <Messages
-        key={currentChannel && currentChannel.id}
-        currentChannel={currentChannel}
+  const [sidebarState,setSidebarState] = React.useState({visible : true});
+
+  window.addEventListener("resize", function(event) {
+    if (window.screen.width <= 750) {
+      setSidebarState(prev => ({...prev, visible : false}));
+    }
+    if(window.screen.width > 750){
+      setSidebarState(prev => ({...prev, visible : true}));
+    }
+  });
+
+  return(
+  <AppContext.Provider value={{sidebarState}}>
+    <Grid columns="equal" className="app" style={{ background: secondaryColor }}>
+      <ColorPanel
+        key={currentUser && currentUser.name}
         currentUser={currentUser}
-        isPrivateChannel={isPrivateChannel}
+        sidebarState={sidebarState}
       />
-    </Grid.Column>
+      <SidePanel
+        key={currentUser && currentUser.uid}
+        currentUser={currentUser}
+        primaryColor={primaryColor}
+        sidebarState={sidebarState}
+      />
 
-    <Grid.Column width={4}>
-      <MetaPanel
-        key={currentChannel && currentChannel.name}
-        userPosts={userPosts}
-        currentChannel={currentChannel}
-        isPrivateChannel={isPrivateChannel}
-      />
-    </Grid.Column>
-  </Grid>
-);
+      <Grid.Column style={{ marginLeft: 320 }}>
+        <Messages
+          key={currentChannel && currentChannel.id}
+          currentChannel={currentChannel}
+          currentUser={currentUser}
+          isPrivateChannel={isPrivateChannel}
+        />
+      </Grid.Column>
+
+      <Grid.Column width={4}>
+        <MetaPanel
+          key={currentChannel && currentChannel.name}
+          userPosts={userPosts}
+          currentChannel={currentChannel}
+          isPrivateChannel={isPrivateChannel}
+        />
+      </Grid.Column>
+    </Grid>
+  </AppContext.Provider>
+)};
 
 const mapStateToProps = state => ({
   currentUser: state.user.currentUser,
